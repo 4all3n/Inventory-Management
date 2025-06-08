@@ -384,7 +384,7 @@ def view_all_sheets():
 
 # Route for viewing individual sheet data
 @app.route('/sheets/<sheet_name>')
-def view_sheet(sheet_name):  # 🔁 Replace with your actual Excel file path
+def view_sheet(sheet_name): 
 
     try:
         df = pd.read_excel(EXCEL_FILE, sheet_name=sheet_name)
@@ -399,17 +399,17 @@ def view_sheet(sheet_name):  # 🔁 Replace with your actual Excel file path
 def edit_row(sheet_name, row_index):
     df = pd.read_excel(EXCEL_FILE, sheet_name=sheet_name)
 
-    if row_index < 1 or row_index > len(df):
+    if row_index < 1 or row_index > len(df)+1:
         return f"Invalid row index: {row_index}", 404
 
     if request.method == 'POST':
         for header in df.columns:
-            df.at[row_index - 1, header] = request.form.get(header)
+            df.at[row_index - 2, header] = request.form.get(header)
         df.to_excel(EXCEL_FILE, sheet_name=sheet_name, index=False)
         return redirect(url_for('view_sheet', sheet_name=sheet_name))
 
     headers = df.columns.tolist()
-    row_data = df.iloc[row_index - 1].tolist()
+    row_data = df.iloc[row_index - 2].tolist()
     zipped = list(zip(headers, row_data))
 
     return render_template('edit_row.html', sheet_name=sheet_name, zipped=zipped)

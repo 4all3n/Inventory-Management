@@ -337,9 +337,12 @@
           const selectedHsn = hsnSelect.value;
           const availableStock = parseFloat(stocks[selectedHsn] || 0);
 
-          if (units > availableStock) {
-              inventoryWarning.textContent = `Only ${availableStock} units in stock`;
-          } else {
+          if (0 == availableStock) {
+              inventoryWarning.textContent = `No units in stock`;
+          }else if (units > availableStock) {
+              inventoryWarning.textContent = `Only ${availableStock} units available`;
+          } 
+          else {
               inventoryWarning.textContent = '';
           }
       }

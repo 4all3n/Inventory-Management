@@ -170,11 +170,13 @@
               {% for header in headers %}
               <th>{{ header }}</th>
               {% endfor %}
+              {% if sheet_name != 'inventory' %}
               <th>Actions</th>
+              {% endif %}
             </tr>
           </thead>
           <tbody>
-            {% for i, row in enumerate(rows) %}
+            {% for row in rows %}
             <tr>
               {% for cell in row %}
               <td>{{ cell }}</td>
