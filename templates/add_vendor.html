@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Add Vendor - IMS</title>
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <!-- Font Awesome for icons -->
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary-color: #2c3e50;
+        --secondary-color: #3498db;
+        --accent-color: #e74c3c;
+      }
+
+      body {
+        background-color: #f8f9fa;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        padding-bottom: 60px;
+      }
+
+      .navbar {
+        background-color: var(--primary-color);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .navbar-brand {
+        color: white !important;
+        font-weight: bold;
+        font-size: 1.5rem;
+      }
+
+      .page-header {
+        background: linear-gradient(
+          135deg,
+          var(--primary-color),
+          var(--secondary-color)
+        );
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+      }
+
+      .form-container {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+      }
+
+      .form-label {
+        font-weight: 500;
+        color: var(--primary-color);
+      }
+
+      .form-control {
+        border-radius: 5px;
+        border: 1px solid #dee2e6;
+        padding: 0.75rem;
+      }
+
+      .form-control:focus {
+        border-color: var(--secondary-color);
+        box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+      }
+
+      .btn-submit {
+        background-color: var(--secondary-color);
+        color: white;
+        padding: 0.75rem 2rem;
+        border: none;
+        border-radius: 5px;
+        font-weight: 500;
+        transition: background-color 0.3s ease;
+      }
+
+      .btn-submit:hover {
+        background-color: #2980b9;
+        color: white;
+      }
+
+      .alert {
+        border-radius: 5px;
+        margin-bottom: 1rem;
+      }
+
+      .footer {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 1rem 0;
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+      }
+
+      .back-button {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        color: white;
+        text-decoration: none;
+        padding: 0.5rem 1rem;
+        border-radius: 5px;
+        background-color: rgba(255, 255, 255, 0.1);
+        transition: background-color 0.3s ease;
+      }
+
+      .back-button:hover {
+        background-color: rgba(255, 255, 255, 0.2);
+        color: white;
+      }
+
+      .required-field::after {
+        content: " *";
+        color: var(--accent-color);
+      }
+
+      .select2-container--bootstrap-5 .select2-selection {
+        border-radius: 5px;
+        border: 1px solid #dee2e6;
+        padding: 0.75rem;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+      <div class="container">
+        <a class="navbar-brand" href="/">
+          <i class="fas fa-boxes me-2"></i>IMS
+        </a>
+      </div>
+    </nav>
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <div class="container position-relative">
+        <h1 class="display-4 mb-3">Add Vendor</h1>
+        <p class="lead">Enter vendor details to add to the system</p>
+        <a href="/" class="back-button">
+          <i class="fas fa-arrow-left me-2"></i>Back to Home
+        </a>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container">
+      <div class="form-container">
+        {% with messages = get_flashed_messages() %} {% if messages %} {% for
+        message in messages %}
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="alert"
+            aria-label="Close"
+          ></button>
+        </div>
+        {% endfor %} {% endif %} {% endwith %}
+
+        <form method="post" class="needs-validation" novalidate>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="hsn_code" class="form-label required-field"
+                >HSN Code</label
+              >
+              <select
+                class="form-select"
+                id="hsn_code"
+                name="hsn_code"
+                required
+                onchange="syncProductName()"
+              >
+                <option value="">Select HSN Code</option>
+                {% for code, name in product_dict.items() %}
+                <option value="{{ code }}">{{ code }}</option>
+                {% endfor %}
+              </select>
+
+              <div class="invalid-feedback">Please select HSN code.</div>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="vendor_name" class="form-label required-field"
+                >Vendor Name</label
+              >
+              <input
+                type="text"
+                class="form-control"
+                id="vendor_name"
+                name="vendor_name"
+                required
+              />
+              <div class="invalid-feedback">Please enter vendor name.</div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="product_name" class="form-label required-field"
+                >Product Name</label
+              >
+              <select
+                class="form-select"
+                id="product_name"
+                name="product_name"
+                required
+              >
+                <option value="">Select Product</option>
+                {% for code, name in product_dict.items() %}
+                <option value="{{ name }}" data-hsn="{{ code }}">
+                  {{ name }}
+                </option>
+                {% endfor %}
+              </select>
+
+              <div class="invalid-feedback">Please select product.</div>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="phone" class="form-label required-field">Phone</label>
+              <input
+                type="tel"
+                class="form-control"
+                id="phone"
+                name="phone"
+                required
+              />
+              <div class="invalid-feedback">Please enter phone number.</div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="email" class="form-label">Email</label>
+              <input
+                type="email"
+                class="form-control"
+                id="email"
+                name="email"
+              />
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="address" class="form-label required-field"
+                >Address</label
+              >
+              <textarea
+                class="form-control"
+                id="address"
+                name="address"
+                rows="3"
+                required
+              ></textarea>
+              <div class="invalid-feedback">Please enter address.</div>
+            </div>
+          </div>
+          <div class="text-center mt-4">
+            <button type="submit" class="btn btn-submit">
+              <i class="fas fa-truck me-2"></i>Add Vendor
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer text-center">
+      <div class="container">
+        <span>© 2024 Inventory Management System. All rights reserved.</span>
+      </div>
+    </footer>
+
+    <!-- Bootstrap JS and Popper.js -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    function syncProductName() {
+        const hsnCode = document.getElementById("hsn_code").value;
+        const productDropdown = document.getElementById("product_name");
+
+        for (let option of productDropdown.options) {
+            if (option.getAttribute("data-hsn") === hsnCode) {
+                productDropdown.value = option.value;
+                break;
+            }
+        }
+    }
+</script>
+
+  </body>
+</html>

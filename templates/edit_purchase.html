@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Purchase</title>
+    <script>
+        async function fetchCost() {
+            const productName = document.getElementById('product_name').value;
+            const res = await fetch(`/get_cost/${productName}`);
+            const data = await res.json();
+            document.getElementById('cost_per_unit').value = data.cost;
+            updateTotal();
+        }
+
+        function updateTotal() {
+            const cost = parseFloat(document.getElementById('cost_per_unit').value) || 0;
+            const units = parseInt(document.getElementById('units').value) || 0;
+            document.getElementById('total_cost').value = (cost * units).toFixed(2);
+        }
+
+        window.onload = function () {
+            updateTotal();
+        };
+    </script>
+</head>
+<body>
+    <h2>Edit Purchase</h2>
+    <form method="POST">
+        <label>HSN Code:</label><br>
+        <select name="hsn_code" required>
+            {% for hsn in hsn_codes %}
+                <option value="{{ hsn }}" {% if hsn == row_data[0] %}selected{% endif %}>{{ hsn }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <label>Product Name:</label><br>
+        <select name="product_name" id="product_name" onchange="fetchCost()" required>
+            {% for name in product_names %}
+                <option value="{{ name }}" {% if name == row_data[1] %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <label>Vendor:</label><br>
+        <select name="vendor" required>
+            {% for vendor in vendors %}
+                <option value="{{ vendor }}" {% if vendor == row_data[2] %}selected{% endif %}>{{ vendor }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <label>Date:</label><br>
+        <input type="date" name="date" value="{{ row_data[3] }}" required><br><br>
+
+        <label>Units:</label><br>
+        <input type="number" id="units" name="units" value="{{ row_data[4] }}" oninput="updateTotal()" required><br><br>
+
+        <label>Cost per Unit:</label><br>
+        <input type="number" step="0.01" id="cost_per_unit" name="cost_per_unit" value="{{ row_data[5] }}" oninput="updateTotal()" required><br><br>
+
+        <label>Total Cost:</label><br>
+        <input type="number" step="0.01" id="total_cost" name="total_cost" readonly><br><br>
+
+        <button type="submit">Update Purchase</button>
+    </form>
+</body>
+</html>
