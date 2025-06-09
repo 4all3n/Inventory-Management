@@ -557,32 +557,50 @@ def delete_row(sheet_name, row_index):
             inventory_df = all_sheets.get('inventory')
             if inventory_df is not None:
                 try:
+                    print("Current inventory state:")
+                    print(inventory_df[['HSN_Code', 'Product_Name', 'Units']].to_string())
+                    
                     # Clean up HSN codes and product names for comparison
                     inventory_df['HSN_Code'] = inventory_df['HSN_Code'].astype(str).str.strip()
                     inventory_df['Product_Name'] = inventory_df['Product_Name'].astype(str).str.strip()
                     
+                    # Get the values we're looking for
+                    target_hsn = str(row_to_delete['HSN_Code']).strip()
+                    target_product = str(row_to_delete['Product_Name']).strip()
+                    print(f"Looking for HSN: '{target_hsn}', Product: '{target_product}'")
+                    
                     # Find matching inventory row
                     inv_match = (
-                        (inventory_df['HSN_Code'] == str(row_to_delete['HSN_Code']).strip()) &
-                        (inventory_df['Product_Name'] == str(row_to_delete['Product_Name']).strip())
+                        (inventory_df['HSN_Code'] == target_hsn) &
+                        (inventory_df['Product_Name'] == target_product)
                     )
+                    
+                    print("Matching rows:")
+                    print(inventory_df[inv_match][['HSN_Code', 'Product_Name', 'Units']].to_string())
                     
                     if inv_match.any():
                         inv_index = inv_match.idxmax()
                         current_stock = int(inventory_df.at[inv_index, 'Units'])
                         units = int(row_to_delete['Units'])
+                        print(f"Current stock: {current_stock}, Units to adjust: {units}")
 
                         if sheet_name.lower() == 'purchases':
                             # For purchases: subtract units when deleting
-                            inventory_df.at[inv_index, 'Units'] = current_stock - units
+                            new_stock = current_stock - units
+                            inventory_df.at[inv_index, 'Units'] = new_stock
+                            print(f"Purchase deletion: {current_stock} - {units} = {new_stock}")
                         elif sheet_name.lower() == 'sales':
                             # For sales: add units back when deleting
-                            inventory_df.at[inv_index, 'Units'] = current_stock + units
+                            new_stock = current_stock + units
+                            inventory_df.at[inv_index, 'Units'] = new_stock
+                            print(f"Sale deletion: {current_stock} + {units} = {new_stock}")
 
                         print(f"Inventory updated: {units} units, new stock: {inventory_df.at[inv_index, 'Units']}")
                         all_sheets['inventory'] = inventory_df
                     else:
                         print("No matching inventory row found")
+                        print("Available HSN codes:", inventory_df['HSN_Code'].unique())
+                        print("Available Products:", inventory_df['Product_Name'].unique())
                 except Exception as e:
                     print(f"Error updating inventory: {e}")
                     flash('Error updating inventory!', 'danger')
