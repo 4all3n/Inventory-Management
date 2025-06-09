@@ -169,8 +169,7 @@
             <tr>
               {% for header in headers %}
               <th>{{ header }}</th>
-              {% endfor %}
-              {% if sheet_name != 'inventory' %}
+              {% endfor %} {% if sheet_name != 'inventory' %}
               <th>Actions</th>
               {% endif %}
             </tr>
@@ -180,7 +179,8 @@
             <tr>
               {% for cell in row %}
               <td>{{ cell }}</td>
-              {% endfor %} {% if sheet_name != 'inventory' %}
+              {% endfor %} 
+              {% if sheet_name != 'inventory' %}
               <td class="action-buttons">
                 <a
                   href="{{ url_for('edit_row', sheet_name=sheet_name, row_index=loop.index + 1) }}"
@@ -195,6 +195,7 @@
                 >
                   <i class="fas fa-trash"></i>
                 </a>
+               
               </td>
               {% endif %}
             </tr>

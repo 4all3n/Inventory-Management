@@ -5,6 +5,7 @@ from datetime import datetime
 from openpyxl import load_workbook
 import openpyxl
 
+
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
@@ -397,22 +398,91 @@ def view_sheet(sheet_name):
 
 @app.route('/sheets/<sheet_name>/edit/<int:row_index>', methods=['GET', 'POST'])
 def edit_row(sheet_name, row_index):
-    df = pd.read_excel(EXCEL_FILE, sheet_name=sheet_name)
+    all_sheets = pd.read_excel(EXCEL_FILE, sheet_name=None)
+    df = all_sheets.get(sheet_name)
 
-    if row_index < 1 or row_index > len(df)+1:
+    if df is None:
+        return f"Sheet '{sheet_name}' not found", 404
+    if row_index < 1 or row_index > len(df) + 1:
         return f"Invalid row index: {row_index}", 404
 
     if request.method == 'POST':
+        inventory_df = all_sheets.get('inventory')
+
+        # ✅ Step 1: Fetch old values before update
+        old_row = df.iloc[row_index - 2]
+        old_units = int(old_row.get('Units', 0))
+        old_hsn = old_row.get('HSN_Code')
+
+        # ✅ Step 2: Read new values from form
+        form_data = {header: request.form.get(header) for header in df.columns}
+        new_units = int(form_data.get('Units', 0))
+        new_hsn = form_data.get('HSN_Code')
+
+        # ✅ Step 3: Update row in sheet
         for header in df.columns:
             df.at[row_index - 2, header] = request.form.get(header)
-        df.to_excel(EXCEL_FILE, sheet_name=sheet_name, index=False)
+
+        # ✅ Step 4: Update inventory
+        if inventory_df is not None and new_hsn:
+            # Find matching inventory row
+            inventory_index = inventory_df[inventory_df['HSN_Code'] == new_hsn].index
+
+            if not inventory_index.empty:
+                inv_idx = inventory_index[0]
+                current_stock = int(inventory_df.at[inv_idx, 'Units'])
+
+                # Adjust based on whether purchase or sale
+                if sheet_name.lower() == 'purchase':
+                    delta_units = new_units - old_units
+                    inventory_df.at[inv_idx, 'Units'] = current_stock + delta_units
+
+                elif sheet_name.lower() == 'sales':
+                    delta_units = old_units - new_units
+                    inventory_df.at[inv_idx, 'Units'] = current_stock + delta_units  # Because sold units reduce stock
+
+                all_sheets['inventory'] = inventory_df
+
+        # ✅ Step 5: Save back all sheets
+        all_sheets[sheet_name] = df
+        with pd.ExcelWriter(EXCEL_FILE, engine='openpyxl', mode='w') as writer:
+            for sheet, data in all_sheets.items():
+                data.to_excel(writer, sheet_name=sheet, index=False)
+
         return redirect(url_for('view_sheet', sheet_name=sheet_name))
 
+    # For GET
     headers = df.columns.tolist()
     row_data = df.iloc[row_index - 2].tolist()
     zipped = list(zip(headers, row_data))
 
-    return render_template('edit_row.html', sheet_name=sheet_name, zipped=zipped)
+    # Purchase/sales special rendering
+    if sheet_name.lower() in ['purchases', 'sales']:
+        products_df = all_sheets.get('products')
+        vendors_df = all_sheets.get('vendors')
+
+        hsn_to_product = dict(zip(products_df['HSN_Code'], products_df['Product_Name']))
+        product_to_hsn = dict(zip(products_df['Product_Name'], products_df['HSN_Code']))
+        hsn_codes = list(hsn_to_product.keys())
+        product_names = list(hsn_to_product.values())
+        vendors = vendors_df['Vendor_Name'].tolist()
+
+        return render_template('edit_purchase_and_sales.html',
+                               row_data=row_data,
+                               zipped=zipped,
+                               sheet_name=sheet_name,
+                               hsn_codes=hsn_codes,
+                               product_names=product_names,
+                               vendors=vendors,
+                               hsn_to_product=hsn_to_product,
+                               product_to_hsn=product_to_hsn)
+
+    else:
+        return render_template('edit_row.html',
+                               row_data=row_data,
+                               zipped=zipped,
+                               sheet_name=sheet_name)
+
 
 @app.route('/sheets/<sheet_name>/delete/<int:row_index>', methods=['GET'])
 def delete_row(sheet_name, row_index):
