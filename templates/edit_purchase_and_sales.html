@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Purchase - IMS</title>
+    <title>Edit {{ sheet_name.capitalize() }} - IMS</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome for icons -->
@@ -135,8 +135,8 @@
         <div class="container position-relative">
             <h1 class="display-4 mb-3">Edit {{ sheet_name.capitalize() }}</h1>
             <p class="lead">Update {{ sheet_name }} details</p>
-            <a href="/" class="back-button">
-                <i class="fas fa-arrow-left me-2"></i>Back to Home
+            <a href="{{ url_for('view_sheet', sheet_name=sheet_name) }}" class="back-button">
+                <i class="fas fa-arrow-left me-2"></i>Back to {{ sheet_name.capitalize() }}
             </a>
         </div>
     </div>
@@ -147,8 +147,8 @@
             <form method="POST" class="needs-validation" novalidate>
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label for="hsn_code" class="form-label required-field">HSN Code</label>
-                        <select class="form-select" id="hsn_code" name="hsn_code" onchange="syncProductName()" required>
+                        <label for="HSN_Code" class="form-label required-field">HSN Code</label>
+                        <select class="form-select" id="HSN_Code" name="HSN_Code" onchange="syncProductName()" required>
                             {% for hsn in hsn_codes %}
                                 <option value="{{ hsn }}" {% if hsn == row_data[0] %}selected{% endif %}>{{ hsn }}</option>
                             {% endfor %}
@@ -158,8 +158,8 @@
                         </div>
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label for="product_name" class="form-label required-field">Product Name</label>
-                        <select class="form-select" id="product_name" name="product_name" onchange="syncHSNCode(); fetchCost()" required>
+                        <label for="Product_Name" class="form-label required-field">Product Name</label>
+                        <select class="form-select" id="Product_Name" name="Product_Name" onchange="syncHSNCode(); fetchCost()" required>
                             {% for name in product_names %}
                                 <option value="{{ name }}" {% if name == row_data[1] %}selected{% endif %}>{{ name }}</option>
                             {% endfor %}
@@ -173,27 +173,23 @@
                     {% if sheet_name == 'purchases' %}
                         <!-- VENDOR Dropdown for Purchase -->
                         <div class="col-md-6 mb-3">
-                            <label for="vendor" class="form-label required-field">Vendor</label>
-                            <select class="form-select" name="vendor" id="vendor" required>
+                            <label for="Vendor" class="form-label required-field">Vendor</label>
+                            <select class="form-select" name="Vendor" id="Vendor" required>
                                 {% for v in vendors %}
                                     <option value="{{ v }}" {% if v == zipped[2][1] %}selected{% endif %}>{{ v }}</option>
                                 {% endfor %}
                             </select>
                         </div>
                     {% elif sheet_name == 'sales' %}
-                        <!-- CUSTOMER ID + NAME for Sales -->
+                        <!-- CUSTOMER for Sales -->
                         <div class="col-md-6 mb-3">
-                            <label for="cust_id" class="form-label required-field">Customer ID</label>
-                            <input type="text" class="form-control" name="cust_id" value="{{ zipped[0][1] }}" required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="cust_name" class="form-label required-field">Customer Name</label>
-                            <input type="text" class="form-control" name="cust_name" value="{{ zipped[1][1] }}" required>
+                            <label for="Customer" class="form-label required-field">Customer</label>
+                            <input type="text" class="form-control" name="Customer" value="{{ zipped[2][1] }}" required>
                         </div>
                     {% endif %}
                     <div class="col-md-6 mb-3">
-                        <label for="date" class="form-label required-field">Date</label>
-                        <input type="date" class="form-control" id="date" name="date" value="{{ row_data[3] }}" required>
+                        <label for="Date" class="form-label required-field">Date</label>
+                        <input type="date" class="form-control" id="Date" name="Date" value="{{ row_data[3] }}" required>
                         <div class="invalid-feedback">
                             Please select date.
                         </div>
@@ -201,17 +197,17 @@
                 </div>
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label for="units" class="form-label required-field">Units</label>
-                        <input type="number" class="form-control" id="units" name="units" value="{{ row_data[4] }}" oninput="updateTotal()" required>
+                        <label for="Units" class="form-label required-field">Units</label>
+                        <input type="number" class="form-control" id="Units" name="Units" value="{{ row_data[4] }}" oninput="updateTotal()" required>
                         <div class="invalid-feedback">
                             Please enter number of units.
                         </div>
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label for="cost_per_unit" class="form-label required-field">Cost per Unit</label>
+                        <label for="Cost_per_Unit" class="form-label required-field">Cost per Unit</label>
                         <div class="input-group">
                             <span class="input-group-text">₹</span>
-                            <input type="number"  readonly class="form-control" id="cost_per_unit" name="cost_per_unit" value="{{ row_data[5] }}" oninput="updateTotal()" required>
+                            <input type="number" step="0.01" class="form-control" id="Cost_per_Unit" name="Cost_per_Unit" value="{{ row_data[5] }}" oninput="updateTotal()" required>
                         </div>
                         <div class="invalid-feedback">
                             Please enter cost per unit.
@@ -219,16 +215,16 @@
                     </div>
                 </div>
                 <div class="col-md-6 mb-3">
-                    <label for="total_cost" class="form-label">Total Cost</label>
+                    <label for="Total_Cost" class="form-label">Total Cost</label>
                     <div class="input-group">
                         <span class="input-group-text">₹</span>
-                        <input type="text" class="form-control" id="total_cost" readonly>
+                        <input type="text" class="form-control" id="Total_Cost" name="Total_Cost" readonly>
                     </div>
                 </div>
 
                 <div class="text-center mt-4">
                     <button type="submit" class="btn btn-submit">
-                        <i class="fas fa-save me-2"></i>Update Purchase
+                        <i class="fas fa-save me-2"></i>Update {{ sheet_name.capitalize() }}
                     </button>
                 </div>
             </form>
@@ -245,61 +241,44 @@
     <!-- Bootstrap JS and Popper.js -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const hsnToProduct = {{ hsn_to_product | tojson }};
-        const productToHsn = {{ product_to_hsn | tojson }};
+        // Parse the JSON data from the template
+        const hsnToProduct = JSON.parse('{{ hsn_to_product | tojson | safe }}');
+        const productToHsn = JSON.parse('{{ product_to_hsn | tojson | safe }}');
 
         function syncProductName() {
-            const hsn = document.getElementById('hsn_code').value;
+            const hsn = document.getElementById('HSN_Code').value;
             const product = hsnToProduct[hsn];
             if (product) {
-                document.getElementById('product_name').value = product;
+                document.getElementById('Product_Name').value = product;
                 fetchCost();
             }
         }
 
         function syncHSNCode() {
-            const product = document.getElementById('product_name').value;
+            const product = document.getElementById('Product_Name').value;
             const hsn = productToHsn[product];
             if (hsn) {
-                document.getElementById('hsn_code').value = hsn;
+                document.getElementById('HSN_Code').value = hsn;
             }
         }
 
         async function fetchCost() {
-            const productName = document.getElementById('product_name').value;
-            const res = await fetch(`/get_cost/${productName}`);
-            const data = await res.json();
-            document.getElementById('cost_per_unit').value = data.cost;
-            updateTotal();
+            const productName = document.getElementById('Product_Name').value;
+            try {
+                const res = await fetch(`/get_cost/${productName}`);
+                const data = await res.json();
+                document.getElementById('Cost_per_Unit').value = data.cost;
+                updateTotal();
+            } catch (error) {
+                console.error("Failed to fetch cost:", error);
+            }
         }
 
         function updateTotal() {
-            const cost = parseFloat(document.getElementById('cost_per_unit').value) || 0;
-            const units = parseInt(document.getElementById('units').value) || 0;
-            document.getElementById('total_cost').textContent = (cost * units).toFixed(2);
-            document.getElementById('total_cost').value = (cost * units).toFixed(2);
-
-        }
-
-        window.onload = function () {
-            updateTotal();
-        };
-
-
-
-        async function fetchCost() {
-            const productName = document.getElementById('product_name').value;
-            const res = await fetch(`/get_cost/${productName}`);
-            const data = await res.json();
-            document.getElementById('cost_per_unit').value = data.cost;
-            updateTotal();
-        }
-
-        function updateTotal() {
-            const cost = parseFloat(document.getElementById('cost_per_unit').value) || 0;
-            const units = parseInt(document.getElementById('units').value) || 0;
+            const cost = parseFloat(document.getElementById('Cost_per_Unit').value) || 0;
+            const units = parseInt(document.getElementById('Units').value) || 0;
             const total = (cost * units).toFixed(2);
-            document.getElementById('total_cost').value = total;
+            document.getElementById('Total_Cost').value = total;
         }
 
         window.onload = function () {

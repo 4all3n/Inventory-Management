@@ -169,18 +169,16 @@ def add_purchase():
     product_names = sorted(vendor_df['Product_Name'].dropna().unique())
     vendors = sorted(vendor_df['Vendor_Name'].dropna().unique())
 
-     # Load inventory sheet
+    # Load inventory sheet
     try:
         inventory_df = pd.read_excel(EXCEL_FILE, sheet_name="inventory")
     except:
         inventory_df = pd.DataFrame(columns=[
-        'HSN_Code', 'Product_Name', 'Units', 'Cost', 'Selling_Price', 'Total_cost'
-    ])
+            'HSN_Code', 'Product_Name', 'Units', 'Cost', 'Selling_Price', 'Total_cost'
+        ])
 
     hsn_to_product = dict(zip(vendor_df['HSN_Code'].astype(str), vendor_df['Product_Name']))
     hsn_to_selling_price = dict(zip(inventory_df['HSN_Code'].astype(str), inventory_df['Selling_Price'].fillna(0).astype(float)))
-
-   
 
     if request.method == 'POST':
         hsn_code = request.form['hsn_code']
@@ -190,98 +188,77 @@ def add_purchase():
         units = int(request.form['units'])
         cost_per_unit = float(request.form['cost_per_unit'])
         total_cost = units * cost_per_unit
-        
-        
 
         try:
-            purchase_df = pd.read_excel(EXCEL_FILE, sheet_name="purchases")
-        except:
-            purchase_df = pd.DataFrame(columns=[
-                'HSN_Code', 'Product_Name', 'Vendor', 'Date',
-                'Units', 'Cost_per_Unit', 'Total_Cost'
-            ])
+            # Read all sheets at once to avoid multiple file operations
+            with pd.ExcelFile(EXCEL_FILE) as xls:
+                purchase_df = pd.read_excel(xls, sheet_name="purchases")
+                inventory_df = pd.read_excel(xls, sheet_name="inventory")
 
-        new_row = pd.DataFrame([{
-            'HSN_Code': hsn_code,
-            'Product_Name': product_name,
-            'Vendor': vendor,
-            'Date': date,
-            'Units': units,
-            'Cost_per_Unit': cost_per_unit,
-            'Total_Cost': total_cost
-        }])
-        purchase_df = pd.concat([purchase_df, new_row], ignore_index=True)
-
-        try:
-            inventory_df = pd.read_excel(EXCEL_FILE, sheet_name="inventory")
-        except:
-            inventory_df = pd.DataFrame(columns=[
-                'HSN_Code', 'Product_Name', 'Units', 'Cost', 'Selling_Price', 'Total_cost'
-            ])
-
-                # Clean values for safer comparison
-        hsn_code = str(hsn_code).strip()
-        product_name = str(product_name).strip()
-
-        inventory_df['HSN_Code'] = inventory_df['HSN_Code'].astype(str).str.strip()
-        inventory_df['Product_Name'] = inventory_df['Product_Name'].astype(str).str.strip()
-
-        match = (
-            (inventory_df['HSN_Code'] == hsn_code) &
-            (inventory_df['Product_Name'] == product_name)
-        )
-
-        if match.any():
-            # Update existing inventory entry
-            inventory_df.loc[match, 'Units'] = (
-                inventory_df.loc[match, 'Units'].astype(float) + units
-            )
-            inventory_df.loc[match, 'Cost'] = cost_per_unit
-            inventory_df.loc[match, 'Total_cost'] = (
-                inventory_df.loc[match, 'Units'].astype(float) * cost_per_unit
-            )
-        else:
-            # Add new entry
-            new_inv = pd.DataFrame([{
+            # Add new purchase
+            new_row = pd.DataFrame([{
                 'HSN_Code': hsn_code,
                 'Product_Name': product_name,
+                'Vendor': vendor,
+                'Date': date,
                 'Units': units,
-                'Cost': cost_per_unit,
-                'Selling_Price': 0,  # default
-                'Total_cost': units * cost_per_unit
+                'Cost_per_Unit': cost_per_unit,
+                'Total_Cost': total_cost
             }])
-            inventory_df = pd.concat([inventory_df, new_inv], ignore_index=True)
+            purchase_df = pd.concat([purchase_df, new_row], ignore_index=True)
 
+            # Clean values for safer comparison
+            hsn_code = str(hsn_code).strip()
+            product_name = str(product_name).strip()
 
-        if match.any():
-            inventory_df.loc[match, 'Units'] += units
-            # Optionally update cost and total cost
-            inventory_df.loc[match, 'Cost'] = cost_per_unit
-            inventory_df.loc[match, 'Total_cost'] = inventory_df.loc[match, 'Units'] * cost_per_unit
-        else:
-            new_inv = pd.DataFrame([{
-                'HSN_Code': hsn_code,
-                'Product_Name': product_name,
-                'Units': units,
-                'Cost': cost_per_unit,
-                'Selling_Price': 0,  # Default, update later if needed
-                'Total_cost': units * cost_per_unit
-            }])
-            inventory_df = pd.concat([inventory_df, new_inv], ignore_index=True)
+            inventory_df['HSN_Code'] = inventory_df['HSN_Code'].astype(str).str.strip()
+            inventory_df['Product_Name'] = inventory_df['Product_Name'].astype(str).str.strip()
 
-        with pd.ExcelWriter(EXCEL_FILE, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
-            purchase_df.to_excel(writer, sheet_name="purchases", index=False)
-            inventory_df.to_excel(writer, sheet_name="inventory", index=False)
+            match = (
+                (inventory_df['HSN_Code'] == hsn_code) &
+                (inventory_df['Product_Name'] == product_name)
+            )
 
-        flash("✅ Purchase added and inventory updated successfully!")
-        return redirect('/add_purchase')
+            if match.any():
+                # Update existing inventory entry
+                inventory_df.loc[match, 'Units'] = (
+                    inventory_df.loc[match, 'Units'].astype(float) + units
+                )
+                inventory_df.loc[match, 'Cost'] = cost_per_unit
+                inventory_df.loc[match, 'Total_cost'] = (
+                    inventory_df.loc[match, 'Units'].astype(float) * cost_per_unit
+                )
+            else:
+                # Add new entry
+                new_inv = pd.DataFrame([{
+                    'HSN_Code': hsn_code,
+                    'Product_Name': product_name,
+                    'Units': units,
+                    'Cost': cost_per_unit,
+                    'Selling_Price': 0,  # default
+                    'Total_cost': total_cost
+                }])
+                inventory_df = pd.concat([inventory_df, new_inv], ignore_index=True)
 
-    return render_template("add_purchase.html",
-                           hsn_codes=hsn_codes,
-                           product_names=product_names,
-                           vendors=vendors,
-                           hsn_to_product=hsn_to_product,
-                           hsn_to_selling_price=hsn_to_selling_price)
+            # Save all changes at once
+            with pd.ExcelWriter(EXCEL_FILE, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
+                purchase_df.to_excel(writer, sheet_name='purchases', index=False)
+                inventory_df.to_excel(writer, sheet_name='inventory', index=False)
+
+            flash("Purchase added successfully!")
+            return redirect(url_for('add_purchase'))
+
+        except Exception as e:
+            print(f"Error adding purchase: {str(e)}")
+            flash("Error adding purchase. Please try again.")
+            return redirect(url_for('add_purchase'))
+
+    return render_template('add_purchase.html', 
+                         hsn_codes=hsn_codes,
+                         product_names=product_names,
+                         vendors=vendors,
+                         hsn_to_product=hsn_to_product,
+                         hsn_to_selling_price=hsn_to_selling_price)
 
 
 
@@ -403,60 +380,120 @@ def edit_row(sheet_name, row_index):
 
     if df is None:
         return f"Sheet '{sheet_name}' not found", 404
-    if row_index < 1 or row_index > len(df) + 1:
+    
+    # Convert 1-based index to 0-based index
+    actual_index = row_index - 1
+    
+    if actual_index < 0 or actual_index >= len(df):
         return f"Invalid row index: {row_index}", 404
 
     if request.method == 'POST':
+        print("Form Data:", request.form)  # Debug print
         inventory_df = all_sheets.get('inventory')
 
-        # ✅ Step 1: Fetch old values before update
-        old_row = df.iloc[row_index - 2]
-        old_units = int(old_row.get('Units', 0))
-        old_hsn = old_row.get('HSN_Code')
+        # Step 1: Fetch old row before update
+        old_row = df.iloc[actual_index].copy()
+        print("Old Row:", old_row.to_dict())  # Debug print
+        old_units = int(old_row.get('Units', 0) or 0)
+        old_hsn = str(old_row.get('HSN_Code')).strip()
+        old_product = str(old_row.get('Product_Name')).strip()
 
-        # ✅ Step 2: Read new values from form
-        form_data = {header: request.form.get(header) for header in df.columns}
-        new_units = int(form_data.get('Units', 0))
-        new_hsn = form_data.get('HSN_Code')
-
-        # ✅ Step 3: Update row in sheet
+        # Step 2: Get new form values and convert to appropriate types
+        form_data = {}
         for header in df.columns:
-            df.at[row_index - 2, header] = request.form.get(header)
+            # Get the last value if there are duplicates
+            values = request.form.getlist(header)
+            value = values[-1] if values else None
+            
+            print(f"Processing {header}: {value}")  # Debug print
+            if value is not None and value != '':
+                try:
+                    # Convert values based on column type
+                    if header in ['Units']:
+                        form_data[header] = int(value)
+                    elif header in ['Cost_per_Unit', 'Selling_Price_per_Unit', 'Total_Cost', 'Total_Amount']:
+                        form_data[header] = float(value)
+                    elif header == 'HSN_Code':
+                        form_data[header] = str(value).strip()
+                    else:
+                        form_data[header] = str(value).strip()
+                except ValueError as e:
+                    print(f"Error converting {header}: {e}")  # Debug print
+                    form_data[header] = old_row[header]
+            else:
+                form_data[header] = old_row[header]
 
-        # ✅ Step 4: Update inventory
-        if inventory_df is not None and new_hsn:
-            # Find matching inventory row
-            inventory_index = inventory_df[inventory_df['HSN_Code'] == new_hsn].index
+        print("Form Data after processing:", form_data)  # Debug print
 
-            if not inventory_index.empty:
-                inv_idx = inventory_index[0]
-                current_stock = int(inventory_df.at[inv_idx, 'Units'])
+        # Step 3: Update the row with new values
+        try:
+            for header in df.columns:
+                df.at[actual_index, header] = form_data[header]
+            print("Row updated successfully")  # Debug print
+        except Exception as e:
+            print(f"Error updating row: {e}")  # Debug print
+            flash("Error updating row. Please try again.", "error")
+            return redirect(url_for('view_sheet', sheet_name=sheet_name))
 
-                # Adjust based on whether purchase or sale
-                if sheet_name.lower() == 'purchase':
-                    delta_units = new_units - old_units
-                    inventory_df.at[inv_idx, 'Units'] = current_stock + delta_units
+        # Step 4: Adjust inventory if needed
+        if inventory_df is not None:
+            try:
+                # Clean up HSN codes and product names for comparison
+                inventory_df['HSN_Code'] = inventory_df['HSN_Code'].astype(str).str.strip()
+                inventory_df['Product_Name'] = inventory_df['Product_Name'].astype(str).str.strip()
 
-                elif sheet_name.lower() == 'sales':
-                    delta_units = old_units - new_units
-                    inventory_df.at[inv_idx, 'Units'] = current_stock + delta_units  # Because sold units reduce stock
+                # Find matching inventory row
+                inv_match = (
+                    (inventory_df['HSN_Code'] == form_data['HSN_Code']) &
+                    (inventory_df['Product_Name'] == form_data['Product_Name'])
+                )
+                
+                if inv_match.any():
+                    inv_index = inv_match.idxmax()
+                    current_stock = int(inventory_df.at[inv_index, 'Units'])
+
+                    if sheet_name.lower() == 'purchases':
+                        # For purchases: new_units - old_units
+                        delta = int(form_data['Units']) - old_units
+                        inventory_df.at[inv_index, 'Units'] = current_stock + delta
+                        # Update cost and total cost
+                        inventory_df.at[inv_index, 'Cost'] = float(form_data['Cost_per_Unit'])
+                        inventory_df.at[inv_index, 'Total_cost'] = float(form_data['Total_Cost'])
+                    elif sheet_name.lower() == 'sales':
+                        # For sales: old_units - new_units
+                        delta = old_units - int(form_data['Units'])
+                        inventory_df.at[inv_index, 'Units'] = current_stock + delta
+
+                    print(f"Inventory updated: {delta} units, new stock: {inventory_df.at[inv_index, 'Units']}")
+                else:
+                    print("No matching inventory row found")
 
                 all_sheets['inventory'] = inventory_df
+            except Exception as e:
+                print(f"Error updating inventory: {e}")  # Debug print
+                flash("Error updating inventory. Please try again.", "error")
+                return redirect(url_for('view_sheet', sheet_name=sheet_name))
 
-        # ✅ Step 5: Save back all sheets
-        all_sheets[sheet_name] = df
-        with pd.ExcelWriter(EXCEL_FILE, engine='openpyxl', mode='w') as writer:
-            for sheet, data in all_sheets.items():
-                data.to_excel(writer, sheet_name=sheet, index=False)
+        # Step 5: Save all sheets back
+        try:
+            all_sheets[sheet_name] = df
+            with pd.ExcelWriter(EXCEL_FILE, engine='openpyxl', mode='w') as writer:
+                for name, data in all_sheets.items():
+                    data.to_excel(writer, sheet_name=name, index=False)
+            print("Excel file saved successfully")  # Debug print
+        except Exception as e:
+            print(f"Error saving Excel file: {e}")  # Debug print
+            flash("Error saving changes. Please try again.", "error")
+            return redirect(url_for('view_sheet', sheet_name=sheet_name))
 
+        flash(f"Row updated successfully!", "success")
         return redirect(url_for('view_sheet', sheet_name=sheet_name))
 
-    # For GET
+    # GET: Render edit form
     headers = df.columns.tolist()
-    row_data = df.iloc[row_index - 2].tolist()
+    row_data = df.iloc[actual_index].tolist()
     zipped = list(zip(headers, row_data))
 
-    # Purchase/sales special rendering
     if sheet_name.lower() in ['purchases', 'sales']:
         products_df = all_sheets.get('products')
         vendors_df = all_sheets.get('vendors')
@@ -476,30 +513,97 @@ def edit_row(sheet_name, row_index):
                                vendors=vendors,
                                hsn_to_product=hsn_to_product,
                                product_to_hsn=product_to_hsn)
-
     else:
         return render_template('edit_row.html',
                                row_data=row_data,
                                zipped=zipped,
                                sheet_name=sheet_name)
 
+@app.route('/get_cost/<product_name>')
+def get_cost(product_name):
+    df_inventory = pd.read_excel(EXCEL_FILE, sheet_name='inventory')
+    row = df_inventory[df_inventory['Product_Name'] == product_name]
+
+    if not row.empty:
+        cost = float(row.iloc[0]['Selling_Price'])  # or 'Cost_per_unit' if purchase
+        return jsonify({'cost': cost})
+    return jsonify({'cost': 0})
+
 
 @app.route('/sheets/<sheet_name>/delete/<int:row_index>', methods=['GET'])
 def delete_row(sheet_name, row_index):
-    excel_path = "data/inventory_data.xlsx"  # Replace with your actual path
-    df = pd.read_excel(excel_path, sheet_name=sheet_name)
+    try:
+        # Read all sheets at once
+        all_sheets = pd.read_excel(EXCEL_FILE, sheet_name=None)
+        df = all_sheets.get(sheet_name)
 
-    if row_index - 1 >= len(df) or row_index - 1 < 0:
-        flash('Invalid row index!', 'danger')
+        if df is None:
+            flash('Sheet not found!', 'danger')
+            return redirect(url_for('view_sheet', sheet_name=sheet_name))
+
+        # Convert 1-based index to 0-based index
+        actual_index = row_index - 1
+        
+        if actual_index < 0 or actual_index >= len(df):
+            flash('Invalid row index!', 'danger')
+            return redirect(url_for('view_sheet', sheet_name=sheet_name))
+
+        # Get the row to be deleted before removing it
+        row_to_delete = df.iloc[actual_index].copy()
+        print(f"Deleting row: {row_to_delete.to_dict()}")  # Debug print
+
+        # Update inventory if this is a purchase or sale
+        if sheet_name.lower() in ['purchases', 'sales']:
+            inventory_df = all_sheets.get('inventory')
+            if inventory_df is not None:
+                try:
+                    # Clean up HSN codes and product names for comparison
+                    inventory_df['HSN_Code'] = inventory_df['HSN_Code'].astype(str).str.strip()
+                    inventory_df['Product_Name'] = inventory_df['Product_Name'].astype(str).str.strip()
+                    
+                    # Find matching inventory row
+                    inv_match = (
+                        (inventory_df['HSN_Code'] == str(row_to_delete['HSN_Code']).strip()) &
+                        (inventory_df['Product_Name'] == str(row_to_delete['Product_Name']).strip())
+                    )
+                    
+                    if inv_match.any():
+                        inv_index = inv_match.idxmax()
+                        current_stock = int(inventory_df.at[inv_index, 'Units'])
+                        units = int(row_to_delete['Units'])
+
+                        if sheet_name.lower() == 'purchases':
+                            # For purchases: subtract units when deleting
+                            inventory_df.at[inv_index, 'Units'] = current_stock - units
+                        elif sheet_name.lower() == 'sales':
+                            # For sales: add units back when deleting
+                            inventory_df.at[inv_index, 'Units'] = current_stock + units
+
+                        print(f"Inventory updated: {units} units, new stock: {inventory_df.at[inv_index, 'Units']}")
+                        all_sheets['inventory'] = inventory_df
+                    else:
+                        print("No matching inventory row found")
+                except Exception as e:
+                    print(f"Error updating inventory: {e}")
+                    flash('Error updating inventory!', 'danger')
+                    return redirect(url_for('view_sheet', sheet_name=sheet_name))
+
+        # Remove the row from the sheet
+        df = df.drop(df.index[actual_index]).reset_index(drop=True)
+        all_sheets[sheet_name] = df
+
+        # Save all sheets back
+        with pd.ExcelWriter(EXCEL_FILE, engine='openpyxl', mode='w') as writer:
+            for name, data in all_sheets.items():
+                data.to_excel(writer, sheet_name=name, index=False)
+
+        flash('Row deleted successfully!', 'success')
         return redirect(url_for('view_sheet', sheet_name=sheet_name))
 
-    df = df.drop(df.index[row_index - 1]).reset_index(drop=True)
-
-    with pd.ExcelWriter(excel_path, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
-        df.to_excel(writer, sheet_name=sheet_name, index=False)
-
-    flash('Row deleted successfully!', 'success')
-    return redirect(url_for('view_sheet', sheet_name=sheet_name))
+    except Exception as e:
+        print(f"Error deleting row: {e}")
+        flash('Error deleting row!', 'danger')
+        return redirect(url_for('view_sheet', sheet_name=sheet_name))
 
 
 if __name__ == '__main__':
