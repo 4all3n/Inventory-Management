@@ -40,8 +40,8 @@ def initialize_excel_file(filepath):
                     print(f"✅ Sheet '{sheet}' created.")
 
 @app.route('/')
-def home():
-    return render_template('home.html')
+def dashboard():
+    return render_template('dashboard.html')
 
 @app.route('/add_customer', methods=['GET', 'POST'])
 def add_customer_route():
